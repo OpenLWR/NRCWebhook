@@ -5,6 +5,7 @@ from datetime import datetime
 from datetime import timedelta
 import os
 import time
+import event_report
 
 hook = Webhook(config.webhook_url)
 
@@ -23,11 +24,11 @@ previous_date = ""
 while True:
 
     if os.name == "nt": #stink windows fix
-        current_date = (datetime.today() - timedelta(days = 1)).strftime('%#m/%#d/%Y')
-        last_date = (datetime.today() - timedelta(days = 2)).strftime('%#m/%#d/%Y')
+        current_date = (datetime.today()).strftime('%#m/%#d/%Y')
+        last_date = (datetime.today() - timedelta(days = 1)).strftime('%#m/%#d/%Y')
     else:
-        current_date = (datetime.today() - timedelta(days = 1)).strftime('%-m/%-d/%Y')
-        last_date = (datetime.today() - timedelta(days = 2)).strftime('%-m/%-d/%Y')
+        current_date = (datetime.today()).strftime('%-m/%-d/%Y')
+        last_date = (datetime.today() - timedelta(days = 1)).strftime('%-m/%-d/%Y')
 
     request = requests.get("https://www.nrc.gov/reading-rm/doc-collections/event-status/reactor-status/powerreactorstatusforlast365days.txt")
 
@@ -52,6 +53,9 @@ while True:
             power = line_content[2]
 
             date = date.split(" ")[0]
+
+            if not plant_name in config.accepted_plants and config.accepted_plants != []:
+                continue
 
             if date == current_date:
                 formatted_lines.append("%s : %s" % (plant_name,power)) 
@@ -84,5 +88,8 @@ while True:
 
         embed = make_embed(big_string,0x00000,current_date)
         hook.send(embed=embed)
+
+    if config.event_report_checks:
+        event_report.run()
 
     time.sleep(3600)
